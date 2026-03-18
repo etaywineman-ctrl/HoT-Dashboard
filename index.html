@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HoT Tuning Dashboard - Entity Only</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js and DataLabels Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .chart-container { position: relative; height: 75vh; min-height: 500px; width: 100%; }
+        
+        /* Custom Select Styling */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.75rem center;
+            background-repeat: no-repeat;
+            background-size: 1.25em 1.25em;
+        }
+
+        /* Toggle switch styling */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #4f46e5;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #4f46e5;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 flex flex-col min-h-screen text-slate-800">
+    <div class="w-full max-w-7xl mx-auto flex-grow flex flex-col space-y-6">
+        
+        <!-- Header -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">Low Variability Steady</h1>
+                <p class="text-slate-500 font-medium mt-1">Tuning Project Performance Dashboard</p>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- ENTITY BREAKDOWN ONLY -->
+        <!-- ========================================== -->
+        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 flex-grow">
+            <div class="flex flex-col xl:flex-row xl:items-end justify-between pb-6 border-b border-slate-100 gap-4">
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-1">
+                        <h2 class="text-xl font-bold text-slate-800">Entity Breakdown</h2>
+                        <span class="bg-indigo-50 text-indigo-700 border border-indigo-100 px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider">Low Variability Steady</span>
+                    </div>
+                    <p class="text-slate-500 text-sm mt-1">Granular analysis of Pre vs Post Tuning accuracy changes across specific entities (Ordered by weight).</p>
+                    <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1.5 rounded-md mt-3 inline-block font-medium">
+                        <strong class="font-bold">Note:</strong> This breakdown displays the top 20 entities and does not represent the entire dataset.
+                    </p>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row flex-wrap items-end gap-3 mt-2 xl:mt-0">
+                    <!-- Data Labels Toggle -->
+                    <div class="flex items-center mb-2 sm:mb-0 mr-2">
+                        <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" name="toggle" id="toggleLabels" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 border-slate-300 appearance-none cursor-pointer transition-all duration-200 z-10 top-0 left-0"/>
+                            <label for="toggleLabels" class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-300 cursor-pointer transition-colors duration-200"></label>
+                        </div>
+                        <label for="toggleLabels" class="text-sm font-medium text-slate-700 cursor-pointer">Data Labels</label>
+                    </div>
+
+                    <!-- Entity Filter Dropdown -->
+                    <div id="entityFilterContainer" class="relative inline-block w-full sm:w-56">
+                        <button id="entityFilterBtn" class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl focus:ring-2 focus:ring-indigo-500 block p-2.5 shadow-sm outline-none transition-all flex justify-between items-center font-medium">
+                            <span class="truncate">Filter Entities...</span>
+                            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="entityFilterDropdown" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto p-1.5 right-0">
+                            <!-- Checkboxes injected here -->
+                        </div>
+                    </div>
+
+                    <select id="categorySelect" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 pr-8 font-medium shadow-sm outline-none transition-all w-full sm:w-48">
+                        <option value="lob">Line Of Business</option>
+                        <option value="customer">HOT Customer Group</option>
+                        <option value="org">Organization</option>
+                    </select>
+                    <select id="metricSelect" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 pr-8 font-medium shadow-sm outline-none transition-all w-full sm:w-40">
+                        <option value="wmape">WMAPE (%)</option>
+                        <option value="accuracy">Accuracy (%)</option>
+                        <option value="bias">Bias (%)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="chart-container pt-6">
+                <canvas id="barChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Register the DataLabels plugin
+        Chart.register(ChartDataLabels);
+
+        // ==========================================
+        // DATA SOURCES
+        // ==========================================
+        const orgData = [
+          { name: 'PRD:OXT:OXT - OXO Int.', initialWmape: 59.25, postWmape: 52.96, initialBias: -6.91, postBias: 6.56 },
+          { name: 'PRD:KMS:KMS - Kaz USA', initialWmape: 64.60, postWmape: 51.64, initialBias: 21.74, postBias: 24.94 },
+          { name: 'PRD:KTN:KTN - Kaz Switz.', initialWmape: 48.44, postWmape: 46.56, initialBias: 17.51, postBias: 18.15 },
+          { name: 'PRD:HOB:Helen of Troy DC', initialWmape: 36.48, postWmape: 36.75, initialBias: -1.75, postBias: 9.30 },
+          { name: 'PRD:HFT:HFT-Hydro Flask', initialWmape: 71.01, postWmape: 75.93, initialBias: 17.17, postBias: 13.61 },
+          { name: 'PRD:JUK:HOT (UK) Ltd', initialWmape: 60.87, postWmape: 57.74, initialBias: 37.70, postBias: 40.22 },
+          { name: 'PRD:COB:COB - Curlsmith', initialWmape: 69.49, postWmape: 64.87, initialBias: 15.54, postBias: 18.90 },
+          { name: 'PRD:JHM:JHM - Jiaxing', initialWmape: 108.33, postWmape: 102.32, initialBias: -55.56, postBias: -46.55 },
+          { name: 'PRD:DOB:DOB - Drybar USA', initialWmape: 66.43, postWmape: 58.45, initialBias: -16.39, postBias: -9.86 },
+          { name: 'PRD:KCN:KCN - Kaz Metro CA', initialWmape: 53.13, postWmape: 46.25, initialBias: -22.59, postBias: -16.67 },
+          { name: 'PRD:OOB:OOB - Osprey', initialWmape: 72.03, postWmape: 78.63, initialBias: -13.62, postBias: -15.78 },
+          { name: 'PRD:HMZ:HMZ - HOT Mexico', initialWmape: 48.24, postWmape: 48.04, initialBias: 23.90, postBias: 30.13 },
+          { name: 'PRD:OKT:OKT - Osprey KTN', initialWmape: 117.95, postWmape: 113.32, initialBias: -87.01, postBias: -77.82 },
+          { name: 'PRD:HFC:Hydro Flask Metro CA', initialWmape: 100.58, postWmape: 99.29, initialBias: -50.35, postBias: -52.68 },
+          { name: 'PRD:HCN:Helen of Troy (CA)', initialWmape: 42.10, postWmape: 33.15, initialBias: 5.30, postBias: 6.68 },
+          { name: 'PRD:OGB:Osprey Great Bear', initialWmape: 72.75, postWmape: 69.96, initialBias: 5.53, postBias: 8.02 },
+          { name: 'PRD:KEC:KEC - Kaz Switz.', initialWmape: 28.92, postWmape: 34.14, initialBias: -0.84, postBias: -5.77 },
+          { name: 'PRD:CMC:Curlsmith Metro CA', initialWmape: 99.70, postWmape: 99.58, initialBias: 98.28, postBias: 98.37 },
+          { name: 'PRD:OMC:Osprey Metro CA', initialWmape: 107.30, postWmape: 102.19, initialBias: -44.46, postBias: -27.73 },
+        ];
+
+        const customerData = [
+          { name: 'OXO TARGET', initialWmape: 55.99, postWmape: 55.99, initialBias: 19.02, postBias: 29.81 },
+          { name: 'OXO WALMART', initialWmape: 51.57, postWmape: 51.57, initialBias: -54.58, postBias: -31.79 },
+          { name: 'OXO AMAZON', initialWmape: 65.96, postWmape: 65.96, initialBias: -11.00, postBias: 2.62 },
+          { name: 'OXO ALL OTHER', initialWmape: 46.66, postWmape: 46.66, initialBias: -6.56, postBias: 6.40 },
+          { name: 'AMAZON.COM (HC)', initialWmape: 62.75, postWmape: 66.47, initialBias: 32.73, postBias: 38.80 },
+          { name: 'AMAZON EMEA', initialWmape: 67.23, postWmape: 63.29, initialBias: 37.34, postBias: 39.49 },
+          { name: 'BEAUTY US WALMART', initialWmape: 51.27, postWmape: 28.04, initialBias: -73.34, postBias: 24.10 },
+          { name: 'HF AMAZON', initialWmape: 87.87, postWmape: 90.66, initialBias: 52.18, postBias: 38.86 },
+          { name: 'WAL-MART STORES ALL (US)', initialWmape: 44.23, postWmape: 44.23, initialBias: 60.12, postBias: 14.04 },
+          { name: 'WALGREENS', initialWmape: 44.21, postWmape: 44.21, initialBias: -10.90, postBias: 38.98 },
+          { name: 'TARGET STORES ALL (US)', initialWmape: 60.31, postWmape: 60.31, initialBias: 30.41, postBias: 33.42 },
+          { name: 'Beauty US Target', initialWmape: 62.97, postWmape: 24.10, initialBias: 46.94, postBias: 7.54 },
+          { name: 'CS ULTA US', initialWmape: 92.08, postWmape: 78.76, initialBias: 3.32, postBias: 5.49 },
+          { name: 'GERMANY ALL OTHER', initialWmape: 31.46, postWmape: 41.84, initialBias: -11.95, postBias: -20.73 },
+          { name: 'BEAUTY US AMAZON', initialWmape: 89.47, postWmape: 79.14, initialBias: -8.12, postBias: 0.35 },
+          { name: 'OXO KROGER', initialWmape: 66.73, postWmape: 66.73, initialBias: 27.55, postBias: 18.46 },
+          { name: 'HF ALL OTHER', initialWmape: 100.50, postWmape: 109.34, initialBias: -43.21, postBias: -28.05 },
+          { name: 'CVS MERIDIAN', initialWmape: 54.34, postWmape: 47.70, initialBias: 18.68, postBias: 19.09 },
+          { name: 'HF DTC', initialWmape: 68.23, postWmape: 61.96, initialBias: 6.79, postBias: 4.97 },
+          { name: 'HF ALL APAC', initialWmape: 117.99, postWmape: 112.65, initialBias: -124.54, postBias: -115.75 },
+        ];
+
+        const lobData = [
+          { name: 'HO US LOB', initialWmape: 61.12, postWmape: 56.66, initialBias: -3.63, postBias: 7.17 },
+          { name: 'US LOB', initialWmape: 64.65, postWmape: 51.67, initialBias: 21.78, postBias: 24.97 },
+          { name: 'EMEA LOB', initialWmape: 51.67, postWmape: 48.57, initialBias: 19.92, postBias: 22.22 },
+          { name: 'BEAUTY US', initialWmape: 47.61, postWmape: 45.78, initialBias: 0.24, postBias: 8.95 },
+          { name: 'HO APAC LOB', initialWmape: 107.00, postWmape: 103.42, initialBias: -49.54, postBias: -44.26 },
+          { name: 'CA LOB', initialWmape: 53.13, postWmape: 46.25, initialBias: -22.59, postBias: -16.67 },
+          { name: 'Default Line of Business', initialWmape: 39.26, postWmape: 40.36, initialBias: 19.15, postBias: 28.26 },
+          { name: 'HO CA LOB', initialWmape: 100.39, postWmape: 98.36, initialBias: -48.57, postBias: -48.17 },
+          { name: 'BEAUTY CA', initialWmape: 65.68, postWmape: 58.42, initialBias: 33.67, postBias: 35.96 },
+          { name: 'LA LOB', initialWmape: 72.06, postWmape: 67.49, initialBias: 32.91, postBias: 33.58 },
+          { name: 'HO LA LOB', initialWmape: 91.92, postWmape: 110.58, initialBias: -220.53, postBias: -275.38 },
+        ];
+
+        // --- FILTER STATE ---
+        let activeFilters = new Set(); 
+
+        // --- DYNAMIC CALCULATIONS ---
+        function clamp(val, min, max) {
+            return Math.min(Math.max(val, min), max);
+        }
+
+        [orgData, customerData, lobData].forEach(dataset => {
+            dataset.forEach(d => {
+                // Keep Bias between -100 and 100
+                d.initialBias = clamp(d.initialBias, -100, 100);
+                d.postBias = clamp(d.postBias, -100, 100);
+
+                // Calculate Accuracy (100 - WMAPE) and keep between 0 and 100
+                d.initialAccuracy = clamp(Number((100 - d.initialWmape).toFixed(2)), 0, 100);
+                d.postAccuracy = clamp(Number((100 - d.postWmape).toFixed(2)), 0, 100);
+            });
+        });
+
+        // ==========================================
+        // FILTER DROPDOWN LOGIC
+        // ==========================================
+        function populateFilterDropdown(category) {
+            let data = [];
+            if (category === 'lob') data = lobData;
+            if (category === 'customer') data = customerData;
+            if (category === 'org') data = orgData;
+
+            const dropdown = document.getElementById('entityFilterDropdown');
+            dropdown.innerHTML = '';
+            activeFilters.clear();
+
+            data.forEach((d, index) => {
+                activeFilters.add(d.name); // Default all to checked
+
+                const div = document.createElement('div');
+                div.className = 'flex items-center p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors';
+                div.innerHTML = `
+                    <input type="checkbox" id="filter-${index}" value="${d.name}" checked class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer">
+                    <label for="filter-${index}" class="ml-2.5 text-sm font-medium text-slate-700 cursor-pointer w-full truncate" title="${d.name}">${d.name}</label>
+                `;
+                
+                const checkbox = div.querySelector('input');
+                checkbox.addEventListener('change', (e) => {
+                    if (e.target.checked) activeFilters.add(e.target.value);
+                    else activeFilters.delete(e.target.value);
+                    updateBarChart();
+                });
+                
+                dropdown.appendChild(div);
+            });
+        }
+
+        // Toggle Filter Dropdown
+        document.getElementById('entityFilterBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('entityFilterDropdown').classList.toggle('hidden');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#entityFilterContainer')) {
+                document.getElementById('entityFilterDropdown').classList.add('hidden');
+            }
+        });
+
+        // ==========================================
+        // CHART RENDERING LOGIC
+        // ==========================================
+        let barChartInstance = null;
+
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.color = '#64748b';
+
+        function getActiveBarData(category) {
+            let data = [];
+            if (category === 'lob') data = lobData;
+            if (category === 'customer') data = customerData;
+            if (category === 'org') data = orgData;
+
+            let copy = JSON.parse(JSON.stringify(data));
+            return copy.filter(d => activeFilters.has(d.name));
+        }
+
+        function updateBarChart() {
+            const category = document.getElementById('categorySelect').value;
+            const metric = document.getElementById('metricSelect').value;
+            const showLabels = document.getElementById('toggleLabels').checked;
+            
+            const data = getActiveBarData(category);
+
+            const labels = data.map(d => d.name);
+            let datasets = [];
+
+            if (metric === 'wmape') {
+                datasets = [
+                    { label: 'Initial WMAPE (%)', data: data.map(d => d.initialWmape), backgroundColor: '#cbd5e1', borderRadius: 6, barPercentage: 0.8 },
+                    { label: 'Post Tuning WMAPE (%)', data: data.map(d => d.postWmape), backgroundColor: '#4f46e5', borderRadius: 6, barPercentage: 0.8 }
+                ];
+            } else if (metric === 'accuracy') {
+                datasets = [
+                    { label: 'Initial Accuracy (%)', data: data.map(d => d.initialAccuracy), backgroundColor: '#cbd5e1', borderRadius: 6, barPercentage: 0.8 },
+                    { label: 'Post Tuning Accuracy (%)', data: data.map(d => d.postAccuracy), backgroundColor: '#0ea5e9', borderRadius: 6, barPercentage: 0.8 }
+                ];
+            } else {
+                datasets = [
+                    { label: 'Initial Bias (%)', data: data.map(d => d.initialBias), backgroundColor: '#cbd5e1', borderRadius: 6, barPercentage: 0.8 },
+                    { label: 'Post Tuning Bias (%)', data: data.map(d => d.postBias), backgroundColor: '#10b981', borderRadius: 6, barPercentage: 0.8 }
+                ];
+            }
+
+            if (barChartInstance) barChartInstance.destroy();
+
+            const ctx = document.getElementById('barChart').getContext('2d');
+            barChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: labels, datasets: datasets },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {
+                        padding: { right: showLabels ? 40 : 0 } 
+                    },
+                    plugins: {
+                        datalabels: { 
+                            display: showLabels,
+                            align: 'right',
+                            anchor: 'end',
+                            formatter: (val) => val + '%',
+                            font: { weight: 'bold', size: 11 },
+                            color: '#475569'
+                        },
+                        legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8, font: { weight: '600' } } },
+                        tooltip: { backgroundColor: '#1e293b', titleFont: { size: 13 }, bodyFont: { size: 14, weight: 'bold' }, padding: 12, cornerRadius: 8 }
+                    },
+                    scales: {
+                        x: { grid: { color: '#f1f5f9' }, ticks: { font: { weight: '500' } } },
+                        y: { grid: { display: false }, ticks: { font: { size: 11, weight: '600' }, color: '#334155' } }
+                    }
+                }
+            });
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            populateFilterDropdown(document.getElementById('categorySelect').value);
+            updateBarChart();
+        });
+
+        // Event Listeners for Bar Chart filters
+        document.getElementById('categorySelect').addEventListener('change', (e) => {
+            populateFilterDropdown(e.target.value);
+            updateBarChart();
+        });
+        document.getElementById('metricSelect').addEventListener('change', updateBarChart);
+        document.getElementById('toggleLabels').addEventListener('change', updateBarChart);
+
+    </script>
+</body>
+</html>
